@@ -97,7 +97,7 @@ pattern.forEach(col => {
 });
 
 const makeCommits = async () => {
-  let totalCommits = 500;
+  let totalCommits = 1500;
   let i = 0;
 
   for (let week = 0; week < pattern.length && totalCommits > 0; week++) {
