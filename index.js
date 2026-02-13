@@ -36,9 +36,9 @@ const FILE_PATH = "./data.json";
 
 // ===== SETTINGS =====
 const TEXT = process.argv[2] || "A DEV";
-const INTENSITY = 3;          // commits per green square (1–5 recommended)
-const MAX_COMMITS = 500;      // safety limit
-const TOTAL_WEEKS = 52;       // GitHub shows 52 weeks
+const INTENSITY = 5;          // commits per green square (1–5 recommended)
+const MAX_COMMITS =800;      // safety limit
+const TOTAL_WEEKS = 82;       // GitHub shows 52 weeks
 // =====================
 
 
