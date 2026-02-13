@@ -27,103 +27,105 @@
 // // Number of commits you want
 // makeCommit(100);
 
-
+import simpleGit from "simple-git";
 import jsonfile from "jsonfile";
 import moment from "moment";
-import simpleGit from "simple-git";
 
-const FILE_PATH = "./data.json";
 const git = simpleGit();
+const FILE_PATH = "./data.json";
 
-// 7 rows (Sun-Sat), columns represent weeks
-// 1 = commit, 0 = no commit
+// ===== SETTINGS =====
+const TEXT = process.argv[2] || "A DEV";
+const INTENSITY = 3;          // commits per green square (1–5 recommended)
+const MAX_COMMITS = 500;      // safety limit
+const TOTAL_WEEKS = 52;       // GitHub shows 52 weeks
+// =====================
 
-const pattern = [
-  // A
-  [0,1,1,1,0],
-  [1,0,0,0,1],
-  [1,1,1,1,1],
-  [1,0,0,0,1],
-  [1,0,0,0,1],
 
-  // space
-  [0,0],
+// 5x7 Font
+const FONT = {
+  A: ["01110","10001","10001","11111","10001","10001","10001"],
+  D: ["11110","10001","10001","10001","10001","10001","11110"],
+  E: ["11111","10000","10000","11110","10000","10000","11111"],
+  V: ["10001","10001","10001","10001","10001","01010","00100"],
+  M: ["10001","11011","10101","10101","10001","10001","10001"],
+  I: ["11111","00100","00100","00100","00100","00100","11111"],
+  R: ["11110","10001","10001","11110","10100","10010","10001"],
+  ".": ["00000","00000","00000","00000","00000","01100","01100"],
+  " ": ["000","000","000","000","000","000","000"],
+};
 
-  // .
-  [0],
-  [1],
-  [0],
 
-  // space
-  [0,0],
+// Generate matrix from text
+function generateMatrix(text) {
+  const rows = 7;
+  let matrix = Array.from({ length: rows }, () => []);
 
-  // D
-  [1,1,1,0],
-  [1,0,0,1],
-  [1,0,0,1],
-  [1,0,0,1],
-  [1,1,1,0],
+  text.toUpperCase().split("").forEach(char => {
+    const letter = FONT[char];
+    if (!letter) return;
 
-  // space
-  [0,0],
-
-  // E
-  [1,1,1],
-  [1,0,0],
-  [1,1,1],
-  [1,0,0],
-  [1,1,1],
-
-  // space
-  [0,0],
-
-  // V
-  [1,0,0,0,1],
-  [1,0,0,0,1],
-  [0,1,0,1,0],
-  [0,1,0,1,0],
-  [0,0,1,0,0],
-];
-
-// Flatten into GitHub 7-row structure
-const commits = [];
-
-pattern.forEach(col => {
-  col.forEach((value, rowIndex) => {
-    if (value === 1) {
-      commits.push(rowIndex);
+    for (let r = 0; r < rows; r++) {
+      matrix[r].push(...letter[r].split(""), "0");
     }
   });
-});
 
-const makeCommits = async () => {
-  let totalCommits = 1500;
-  let i = 0;
+  return matrix;
+}
 
-  for (let week = 0; week < pattern.length && totalCommits > 0; week++) {
-    const col = pattern[week];
 
-    for (let day = 0; day < col.length; day++) {
-      if (col[day] === 1 && totalCommits > 0) {
-        const date = moment()
-          .subtract(week, "weeks")
-          .day(day)
-          .format();
+// Auto center text inside 52 weeks
+function centerMatrix(matrix) {
+  const currentWidth = matrix[0].length;
+  const padding = Math.floor((TOTAL_WEEKS - currentWidth) / 2);
 
-        await jsonfile.writeFile(FILE_PATH, { date });
+  matrix.forEach(row => {
+    for (let i = 0; i < padding; i++) {
+      row.unshift("0");
+      row.push("0");
+    }
+  });
 
-        await git.add([FILE_PATH]);
-        await git.commit(`commit ${i}`, { "--date": date });
+  return matrix;
+}
 
-        console.log("Committed:", date);
-        totalCommits--;
-        i++;
+
+async function makeCommits() {
+  let matrix = generateMatrix(TEXT);
+  matrix = centerMatrix(matrix);
+
+  let commitCount = 0;
+
+  for (let col = 0; col < matrix[0].length; col++) {
+    for (let row = 0; row < 7; row++) {
+
+      if (matrix[row][col] === "1") {
+
+        for (let i = 0; i < INTENSITY; i++) {
+
+          if (commitCount >= MAX_COMMITS) break;
+
+          const date = moment()
+            .subtract(TOTAL_WEEKS - col, "weeks")
+            .day(row)
+            .format();
+
+          await jsonfile.writeFile(FILE_PATH, { date: date + "-" + i });
+
+          await git.add([FILE_PATH]);
+          await git.commit(`commit ${commitCount}`, {
+            "--date": date,
+          });
+
+          commitCount++;
+          console.log("Commit:", commitCount);
+        }
       }
     }
   }
 
   await git.push();
-  console.log("Done pushing 🚀");
-};
+  console.log(`🚀 Done! Total commits: ${commitCount}`);
+}
 
 makeCommits();
